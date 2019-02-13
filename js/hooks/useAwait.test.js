@@ -1,12 +1,11 @@
-/* global describe, document, expect, jest, test */
-import React from 'react'
-import { render, testHook } from 'react-testing-library'
+/* global describe, expect, jest, test */
+import { testHook } from 'react-testing-library'
 
 import { useAwait } from './useAwait'
 import { awaitStatus } from '../awaitStatus'
 
-const waitingCheck = () => ({ status: awaitStatus.WAITING })
-const resolvedCheck = () => ({status : awaitStatus.RESOLVED})
+const waitingCheck = () => ({ status : awaitStatus.WAITING })
+const resolvedCheck = () => ({ status : awaitStatus.RESOLVED })
 
 describe('useAwait', () => {
   jest.useFakeTimers()
@@ -57,10 +56,7 @@ describe('useAwait', () => {
 
   test("'checkResponse' is triggered after the 'checkWait'", () => {
     let responded = false
-    const config = {
-      checkResponse : () => responded = true,
-      checkWait : 1000,
-    }
+    const config = { checkResponse : () => responded = true, checkWait : 1000 }
     testHook(() => useAwait([waitingCheck], config))
     expect(responded).toBe(false)
     jest.advanceTimersByTime(500)
