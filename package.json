@@ -1,0 +1,22 @@
+{
+  "name": "@liquid-labs/react-await",
+  "version": "1.0.0-prototype.0",
+  "description": "Hook, render-component, and HOC for rendering \"loading\" messages or other actions based on one or more dynamic conditions.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Liquid-Labs/react-await.git"
+  },
+  "keywords": [
+    "react"
+  ],
+  "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Liquid-Labs/react-await/issues"
+  },
+  "homepage": "https://github.com/Liquid-Labs/react-await#readme"
+}
