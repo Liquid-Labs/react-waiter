@@ -5,9 +5,8 @@ const defaultCheckWait = 3000 //ms = 3 seconds
 
 const checkAwaits = (awaitChecks) =>
   awaitChecks && awaitChecks.length > 0 // there are awaitChecks
-    && awaitChecks.map((check) => check()).sort((a, b) => {
-      a.status < b.status ? -1 : a.status > b.status ? 1 : 0 // ascending sort
-    })
+    && awaitChecks.map((check) => check()).sort((a, b) =>
+      a.status < b.status ? -1 : a.status > b.status ? 1 : 0 ) // ascending sort
 
 const extractStatus = (status) =>
   status & awaitStatus.BLOCKED
@@ -33,14 +32,14 @@ const finalizeReport = (statusInfo) => {
 }
 
 const awaitReportToStrings = ({ finalStatus, statusInfo }, name) => {
-  const strings = statusInfo.map((statInfo =>
+  const checkSummaries = statusInfo.map((statInfo =>
     statInfo.summary
       ? `${statusToString[statInfo.status]}: ${statInfo.summary}`
       : null)).filter((summary) => summary !== null)
 
-  strings.unshift(`${name} is ${statusToString[finalStatus].toLowerCase()}.`)
+  checkSummaries.unshift(`${name} is ${statusToString[finalStatus].toLowerCase()}.`)
 
-  return strings
+  return checkSummaries
 }
 
 const useAwait = (awaitChecks, config={}) => {
@@ -50,7 +49,7 @@ const useAwait = (awaitChecks, config={}) => {
   if (config.checkResponse === undefined) {
     config.checkResponse = (awaitReport, {description}) => {
       if (awaitReport.finalStatus !== awaitStatus.RESOLVED) {
-        window.alert(awaitReportToStrings(awaitReport).join("\n"))
+        window.alert(awaitReportToStrings(awaitReport, config.name).join("\n"))
       }
     }
   }
@@ -58,7 +57,7 @@ const useAwait = (awaitChecks, config={}) => {
   const { checkWait, checkResponse } = config
   const [longWaitCheck, setLongWaitCheck] = useState(null)
 
-  const statusInfo = checkAwaits(awaitChecks)
+  const statusInfo = checkAwaits(awaitChecks) || []
   const awaitReport = finalizeReport(statusInfo)
   awaitReport.description = awaitReportToStrings(awaitReport, config.name)
 
