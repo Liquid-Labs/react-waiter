@@ -4,7 +4,10 @@
   "description": "Hook, render-component, and HOC for rendering \"loading\" messages or other actions based on one or more dynamic conditions.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "catalyst-scripts pretest",
+    "test": "catalyst-scripts test",
+    "lint": "catalyst-scripts lint",
+    "lint-fix": "catalyst-scripts lint-fix"
   },
   "repository": {
     "type": "git",
@@ -18,5 +21,11 @@
   "bugs": {
     "url": "https://github.com/Liquid-Labs/react-await/issues"
   },
-  "homepage": "https://github.com/Liquid-Labs/react-await#readme"
+  "homepage": "https://github.com/Liquid-Labs/react-await#readme",
+  "devDependencies": {
+    "@liquid-labs/catalyst-scripts": "latest",
+    "react": "^16.8.1",
+    "react-dom": "^16.8.1",
+    "react-testing-library": "^5.8.0"
+  }
 }
