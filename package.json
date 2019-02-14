@@ -2,8 +2,15 @@
   "name": "@liquid-labs/react-await",
   "version": "1.0.0-prototype.0",
   "description": "Hook, render-component, and HOC for rendering \"loading\" messages or other actions based on one or more dynamic conditions.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "files": [
+    "dist/"
+  ],
   "scripts": {
+    "prebuild": "rm -rf ./dist/* && mkdir -p ./dist",
+    "build": "catalyst-scripts build",
+    "prepare": "npm run build",
     "pretest": "catalyst-scripts pretest",
     "test": "catalyst-scripts test",
     "lint": "catalyst-scripts lint",
@@ -24,8 +31,30 @@
   "homepage": "https://github.com/Liquid-Labs/react-await#readme",
   "devDependencies": {
     "@liquid-labs/catalyst-scripts": "latest",
+    "prop-types": "^15.7.2",
     "react": "^16.8.1",
     "react-dom": "^16.8.1",
     "react-testing-library": "^5.8.0"
-  }
+  },
+  "peerDependencies": {
+    "react": "^16.8.1",
+    "react-dom": "^16.8.1",
+    "prop-types": "^15.7.2"
+  },
+  "catalyst": {
+    "rollupConfig": {
+      "commonjsConfig": {
+        "namedExports": {
+          "node_modules/react/index.js": [
+            "useEffect",
+            "useState"
+          ]
+        }
+      }
+    },
+    "jestConfig": {
+      "testEnvironment": "jsdom"
+    }
+  },
+  "dependencies": {}
 }
