@@ -1,70 +1,75 @@
 /* global describe, expect, jest, test */
-import { testHook } from 'react-testing-library'
+import React from 'react'
+import { render } from 'react-testing-library'
 
-import { useAwait } from './useAwait'
-import { awaitStatus } from '../awaitStatus'
+import { Await, awaitStatus } from './Await'
 
 const waitingCheck = () => ({ status : awaitStatus.WAITING })
 const resolvedCheck = () => ({ status : awaitStatus.RESOLVED })
+const noOpChild = () => null
 
-describe('useAwait', () => {
+describe('Await', () => {
   jest.useFakeTimers()
 
   test('processes an initially resolved check without setting interval', () => {
-    let report
-    testHook(() => (report = useAwait('test', [resolvedCheck])))
-    expect(report.finalStatus).toBe(awaitStatus.RESOLVED)
+    render(
+      <Await name="test" checks={[ resolvedCheck ]}>{noOpChild}</Await>
+    )
     expect(setInterval).toHaveBeenCalledTimes(0)
   })
 
-  test('clears interval after initially unresolved check resolves', () => {
-    let report
-    let status = awaitStatus.WAITING
-    const { rerender } =
-      testHook(() => (report = useAwait('test', [() => ({status : status})])))
-    expect(report.finalStatus).toBe(awaitStatus.WAITING)
-    expect(setInterval).toHaveBeenCalledTimes(1)
-    expect(clearInterval).toHaveBeenCalledTimes(0)
-    status = awaitStatus.RESOLVED
-    rerender()
-    expect(clearInterval).toHaveBeenCalledTimes(1)
-  })
+  test('clears interval after initially unresolved check resolves and is stable thereafter', () => {
+    // This was originally two tests, but everything to the second re-render
+    // would be the same, so might as well hit both.
+    let checks = [ waitingCheck ]
 
-  test('setting and clearing intervals is stable once resolved', () => {
-    let status = awaitStatus.WAITING
-    const { rerender } =
-      testHook(() => useAwait('test', [() => ({status : status})]))
+    const { rerender } = render(
+      <Await name="test" checks={checks}>{ noOpChild }</Await>
+    )
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(0)
-    status = awaitStatus.RESOLVED
-    rerender()
+    checks = [ resolvedCheck ]
+    rerender(
+      <Await name="test" checks={checks}>{ noOpChild }</Await>
+    )
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(1)
-    rerender()
+    rerender(
+      <Await name="test" checks={checks}>{ noOpChild }</Await>
+    )
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(1)
   })
 
   test('interval cleared on unmount', () => {
-    const { unmount } =
-      testHook(() => useAwait('test', [waitingCheck]))
+    const checks = [ waitingCheck ]
+
+    const { unmount } = render(
+      <Await name="test" checks={checks}>{ noOpChild }</Await>
+    )
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(0)
     unmount()
     expect(clearInterval).toHaveBeenCalledTimes(1)
   })
 
-  test("'checkResponse' is triggered after the 'checkWait'", () => {
-    let responded = false
-    const config = { checkResponse : () => responded = true, checkWait : 1000 }
-    testHook(() => useAwait('test', [waitingCheck], config))
-    expect(responded).toBe(false)
-    jest.advanceTimersByTime(500)
-    expect(responded).toBe(false)
-    jest.advanceTimersByTime(500)
-    expect(responded).toBe(true)
-  })
+  test("'followupHandler' is triggered after the 'followupWait'", () => {
+    let followedUp = false
+    const followupHandler = () => followedUp = true
 
+    render(
+      <Await name="test" checks={[ waitingCheck ]} followupWait={1000}
+          followupHandler={followupHandler}>
+        { noOpChild }
+      </Await>
+    )
+    expect(followedUp).toBe(false)
+    jest.advanceTimersByTime(500)
+    expect(followedUp).toBe(false)
+    jest.advanceTimersByTime(500)
+    expect(followedUp).toBe(true)
+  })
+/*
   test('final report status is ordered by severity', () => {
     const uncheckedCheck = () => ({status : awaitStatus.UNCHECKED})
     const blockedCheck = () => ({status : awaitStatus.BLOCKED})
@@ -89,5 +94,5 @@ describe('useAwait', () => {
     expect(report).toBe(null)
     jest.advanceTimersByTime(500)
     expect(report).toBe('test is waiting.')
-  })
+  })*/
 })
