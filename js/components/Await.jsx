@@ -23,7 +23,7 @@ const awaitStatusToString = {
 
 const defaultFollowupHandler = (report) => {
   if (report.finalStatus !== awaitStatus.RESOLVED) {
-    window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus]}`,
+    window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
       report.summaries.join("\n\t"))
   }
 }
@@ -69,6 +69,7 @@ const runReport = (name, checks, props) => {
     .filter((summary) => summary !== null)
 
   return {
+    name        : name,
     finalStatus : finalStatus,
     checksInfo  : checksInfo,
     summaries   : summaries
