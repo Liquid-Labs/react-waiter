@@ -69,30 +69,39 @@ describe('Await', () => {
     jest.advanceTimersByTime(500)
     expect(followedUp).toBe(true)
   })
-/*
-  test('final report status is ordered by severity', () => {
+
+  test('report status is ordered by severity', () => {
     const uncheckedCheck = () => ({status : awaitStatus.UNCHECKED})
     const blockedCheck = () => ({status : awaitStatus.BLOCKED})
 
     const checks = [ resolvedCheck, blockedCheck, uncheckedCheck, waitingCheck ]
     let report
-    testHook(() => (report = useAwait('test', checks)))
-    expect(report.statusInfo).toHaveLength(4)
-    expect(report.statusInfo[0].status).toBe(awaitStatus.UNCHECKED)
-    expect(report.statusInfo[1].status).toBe(awaitStatus.BLOCKED)
-    expect(report.statusInfo[2].status).toBe(awaitStatus.WAITING)
-    expect(report.statusInfo[3].status).toBe(awaitStatus.RESOLVED)
+    const reportHandler = (r) => report = r
+    render(
+      <Await name="test" checks={checks} reportHandler={reportHandler}>
+        { noOpChild }
+      </Await>
+    )
+    expect(report.checksInfo).toHaveLength(4)
+    expect(report.checksInfo[0].status).toBe(awaitStatus.UNCHECKED)
+    expect(report.checksInfo[1].status).toBe(awaitStatus.BLOCKED)
+    expect(report.checksInfo[2].status).toBe(awaitStatus.WAITING)
+    expect(report.checksInfo[3].status).toBe(awaitStatus.RESOLVED)
   })
 
-  test("default alert issued if unresolved after 'waitCheck'", () => {
+  test("default alert issued if unresolved after 'followupWait'", () => {
     let report = null
-    jest.spyOn(window, 'alert').mockImplementation((out) => report = out);
-    const config = { checkWait : 1000 }
-    testHook(() => useAwait('test', [waitingCheck], config))
+    jest.spyOn(window, 'alert').mockImplementation((out) => report = out)
+
+    render(
+      <Await name="test" checks={[ waitingCheck ]} followupWait={1000}>
+        { noOpChild }
+      </Await>
+    )
     expect(report).toBe(null)
     jest.advanceTimersByTime(500)
     expect(report).toBe(null)
     jest.advanceTimersByTime(500)
     expect(report).toBe('test is waiting.')
-  })*/
+  })
 })
