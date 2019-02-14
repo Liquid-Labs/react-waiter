@@ -42,10 +42,10 @@ const awaitReportToStrings = ({ finalStatus, statusInfo }, name) => {
   return checkSummaries
 }
 
-const useAwait = (awaitChecks, config={}) => {
+const useAwait = (name, awaitChecks, config={}) => {
   // set defaults
+  config.name = name
   if (config.checkWait === undefined) config.checkWait = defaultCheckWait
-  if (config.name === undefined) config.name = 'Unamed await'
   if (config.checkResponse === undefined) {
     config.checkResponse = (awaitReport, {description}) => {
       if (awaitReport.finalStatus !== awaitStatus.RESOLVED) {

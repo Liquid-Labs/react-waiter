@@ -12,7 +12,7 @@ describe('useAwait', () => {
 
   test('processes an initially resolved check without setting interval', () => {
     let report
-    testHook(() => (report = useAwait([resolvedCheck])))
+    testHook(() => (report = useAwait('test', [resolvedCheck])))
     expect(report.finalStatus).toBe(awaitStatus.RESOLVED)
     expect(setInterval).toHaveBeenCalledTimes(0)
   })
@@ -21,7 +21,7 @@ describe('useAwait', () => {
     let report
     let status = awaitStatus.WAITING
     const { rerender } =
-      testHook(() => (report = useAwait([() => ({status : status})])))
+      testHook(() => (report = useAwait('test', [() => ({status : status})])))
     expect(report.finalStatus).toBe(awaitStatus.WAITING)
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(0)
@@ -33,7 +33,7 @@ describe('useAwait', () => {
   test('setting and clearing intervals is stable once resolved', () => {
     let status = awaitStatus.WAITING
     const { rerender } =
-      testHook(() => useAwait([() => ({status : status})]))
+      testHook(() => useAwait('test', [() => ({status : status})]))
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(0)
     status = awaitStatus.RESOLVED
@@ -47,7 +47,7 @@ describe('useAwait', () => {
 
   test('interval cleared on unmount', () => {
     const { unmount } =
-      testHook(() => useAwait([waitingCheck]))
+      testHook(() => useAwait('test', [waitingCheck]))
     expect(setInterval).toHaveBeenCalledTimes(1)
     expect(clearInterval).toHaveBeenCalledTimes(0)
     unmount()
@@ -57,7 +57,7 @@ describe('useAwait', () => {
   test("'checkResponse' is triggered after the 'checkWait'", () => {
     let responded = false
     const config = { checkResponse : () => responded = true, checkWait : 1000 }
-    testHook(() => useAwait([waitingCheck], config))
+    testHook(() => useAwait('test', [waitingCheck], config))
     expect(responded).toBe(false)
     jest.advanceTimersByTime(500)
     expect(responded).toBe(false)
@@ -71,7 +71,7 @@ describe('useAwait', () => {
 
     const checks = [ resolvedCheck, blockedCheck, uncheckedCheck, waitingCheck ]
     let report
-    testHook(() => (report = useAwait(checks)))
+    testHook(() => (report = useAwait('test', checks)))
     expect(report.statusInfo).toHaveLength(4)
     expect(report.statusInfo[0].status).toBe(awaitStatus.UNCHECKED)
     expect(report.statusInfo[1].status).toBe(awaitStatus.BLOCKED)
@@ -83,11 +83,11 @@ describe('useAwait', () => {
     let report = null
     jest.spyOn(window, 'alert').mockImplementation((out) => report = out);
     const config = { checkWait : 1000 }
-    testHook(() => useAwait([waitingCheck], config))
+    testHook(() => useAwait('test', [waitingCheck], config))
     expect(report).toBe(null)
     jest.advanceTimersByTime(500)
     expect(report).toBe(null)
     jest.advanceTimersByTime(500)
-    expect(report).toBe("Unamed await is waiting.")
+    expect(report).toBe('test is waiting.')
   })
 })
