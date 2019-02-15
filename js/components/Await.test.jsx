@@ -1,4 +1,4 @@
-/* global describe, expect, jest, test */
+/* global afterEach, describe, expect, jest, test */
 import React from 'react'
 import { render, cleanup } from 'react-testing-library'
 
@@ -17,7 +17,7 @@ describe('Await', () => {
 
   test("can render a function child", () => {
     const content = "I'm from a func!"
-    const { getByTestId, asFragment } = render(
+    const { getByTestId } = render(
       <Await name="test" checks={[ resolvedCheck ]}>
         { () => <span data-testid="content">{content}</span> }
       </Await>
@@ -27,7 +27,7 @@ describe('Await', () => {
 
   test("can render element children", () => {
     const content = "I'm from an element!"
-    const { getByTestId, asFragment } = render(
+    const { getByTestId } = render(
       <Await name="test" checks={[ resolvedCheck ]}>
         <span data-testid="content">{content}</span>
       </Await>
