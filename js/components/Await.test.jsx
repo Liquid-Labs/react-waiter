@@ -1,6 +1,6 @@
-/* global describe, expect, jest, test */
+/* global afterEach, describe, expect, jest, test */
 import React from 'react'
-import { render } from 'react-testing-library'
+import { render, cleanup } from 'react-testing-library'
 
 import { Await, awaitStatus } from './Await'
 
@@ -10,6 +10,30 @@ const noOpChild = () => null
 
 describe('Await', () => {
   jest.useFakeTimers()
+  // Without the cleanup, you can see strang effects, like the 'getByTestId' in
+  // the "can render [a function|alement]" tests are entangled. It seems
+  // react-testing-library uses the same DOM for subsequent tests.
+  afterEach(cleanup)
+
+  test("can render a function child", () => {
+    const content = "I'm from a func!"
+    const { getByTestId } = render(
+      <Await name="test" checks={[ resolvedCheck ]}>
+        { () => <span data-testid="content">{content}</span> }
+      </Await>
+    )
+    expect(getByTestId('content').textContent).toBe(content)
+  })
+
+  test("can render element children", () => {
+    const content = "I'm from an element!"
+    const { getByTestId } = render(
+      <Await name="test" checks={[ resolvedCheck ]}>
+        <span data-testid="content">{content}</span>
+      </Await>
+    )
+    expect(getByTestId('content').textContent).toBe(content)
+  })
 
   test('processes an initially resolved check without setting interval', () => {
     render(

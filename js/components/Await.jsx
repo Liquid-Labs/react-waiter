@@ -3,7 +3,7 @@
  * on results of running the `awaitChceks` functions, with a net result
  * 'waiting', 'blocked', or 'resolved' corresponding to each render prop.
  */
-import React, { useEffect} from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 // The stati are powers of 2 so we can bit-or them.
@@ -86,16 +86,23 @@ const Await = ({
   if (followupWait === undefined) followupWait = defaultFollowupWait
   if (reportHandler === undefined) reportHandler = defaultReportHandler
 
-  let report = null
+  // We could run the report on every render and avoid soving it to state, but
+  // this way we can avoid re-running in some cases when it it's not necessary
+  // (like when the 'props' but not 'checkProps' are changed).
+  const [ report, setReport ] = useState(null)
+  // The 'initialReport' allows us to provide a report in the first render as
+  // the report generated in the following 'useEffect' is created post first
+  // render. This avoids 'blinking content'.
+  const initialReport = report === null ? runReport(name, checks, checkProps) : null
   useEffect(() => {
-    report = runReport(name, checks, checkProps)
-
-    if (reportHandler) reportHandler(report)
+    const newReport = runReport(name, checks, checkProps)
+    setReport(newReport)
+    if (reportHandler) reportHandler(newReport)
 
     let followupInterval = null
     if (followupHandler) {
-      if (report.finalStatus !== awaitStatus.RESOLVED) {
-        followupInterval = setInterval(() => followupHandler(report), followupWait)
+      if (newReport.finalStatus !== awaitStatus.RESOLVED) {
+        followupInterval = setInterval(() => followupHandler(newReport), followupWait)
       }
     }
 
@@ -106,14 +113,18 @@ const Await = ({
   [name, checks, reportHandler, followupHandler, followupWait, checkProps])
 
   // Pick the render prop to render.
-  if (report !== null && report.finalStatus === awaitStatus.RESOLVED) {
-    return children(props)
+  // TODO: '(initialReport || report)' should NEVER be null. If so, then that's
+  // a program error and should raise an excption or something.
+  if ((initialReport || report) !== null
+      && (initialReport || report).finalStatus === awaitStatus.RESOLVED) {
+    return typeof children === 'function' ? children(props) : children
   }
-  else if (report === null || report.finalStatus === awaitStatus.WAITING) {
-    return spinner(report)
+  else if ((initialReport && report) === null
+           || (initialReport || report).finalStatus === awaitStatus.WAITING) {
+    return spinner(initialReport || report)
   }
   else { // status is either BLOCKED or UNCHECKED
-    return blocked(report)
+    return blocked(initialReport || report)
   }
 }
 
@@ -129,7 +140,7 @@ if (process.env.NODE_ENV !== 'production') {
     blocked       : PropTypes.func,
     checks        : checksValidator,
     checkProps    : PropTypes.any,
-    children      : PropTypes.func.isRequired,
+    children      : PropTypes.oneOfType([PropTypes.node, PropTypes.func]).isRequired,
     followupWait  : PropTypes.number,
     reportHandler : PropTypes.func,
     spinner       : PropTypes.func
