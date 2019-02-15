@@ -33,7 +33,7 @@ const defaultFollowupWait = 3000 //ms = 3 seconds
 const defaultReportHandler = null
 
 // TODO: colorize the report
-const defaultSpinner = (report) =>
+const defaultReportDisplay = (report) =>
   report === null
     ? 'Waiting...'
     : report.summaries.length === 0
@@ -46,7 +46,8 @@ const defaultSpinner = (report) =>
           </ul>
         </div>)
 
-const defaultBlocked = defaultSpinner
+const defaultSpinner = defaultReportDisplay
+const defaultBlocked = defaultReportDisplay
 
 /**
  * runReport executes the `checks` and assembles a final report object.
@@ -150,5 +151,6 @@ if (process.env.NODE_ENV !== 'production') {
 export {
   Await,
   awaitStatus,
-  awaitStatusToString
+  awaitStatusToString,
+  defaultReportDisplay
 }
