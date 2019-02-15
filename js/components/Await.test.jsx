@@ -11,6 +11,16 @@ const noOpChild = () => null
 describe('Await', () => {
   jest.useFakeTimers()
 
+  test("can render element children", () => {
+    // TODO
+    expect(false).toBe(true)
+  })
+
+  test("can render a function child", () => {
+    // TODO
+    expect(false).toBe(true)
+  })
+
   test('processes an initially resolved check without setting interval', () => {
     render(
       <Await name="test" checks={[ resolvedCheck ]}>{noOpChild}</Await>
