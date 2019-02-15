@@ -107,7 +107,7 @@ const Await = ({
 
   // Pick the render prop to render.
   if (report !== null && report.finalStatus === awaitStatus.RESOLVED) {
-    return children(props)
+    return typeof children === 'function' ? children(props) : children
   }
   else if (report === null || report.finalStatus === awaitStatus.WAITING) {
     return spinner(report)
@@ -129,7 +129,7 @@ if (process.env.NODE_ENV !== 'production') {
     blocked       : PropTypes.func,
     checks        : checksValidator,
     checkProps    : PropTypes.any,
-    children      : PropTypes.func.isRequired,
+    children      : PropTypes.oneOfType([PropTypes.node, PropTypes.func]).isRequired,
     followupWait  : PropTypes.number,
     reportHandler : PropTypes.func,
     spinner       : PropTypes.func
