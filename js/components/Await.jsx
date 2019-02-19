@@ -12,7 +12,7 @@
  * complicated alternate component that runs the checks asynchronously in
  * order to support expensive checks.
  */
-import React, { useEffect, useLayoutEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import isEqual from 'lodash.isequal'
 import * as msgs from './msgs'
@@ -68,10 +68,10 @@ const runReport = (name, checks, props) => {
       if (typeof checkInfo !== 'object') {
         throw new Error(msgs.badCheckReturn)
       }
-      else if (checkInfo.status !== awaitStatus.RESOLVED &&
-               checkInfo.status !== awaitStatus.WAITING &&
-               checkInfo.status !== awaitStatus.BLOCKED &&
-               checkInfo.status !== awaitStatus.UNCHECKED) {
+      else if (checkInfo.status !== awaitStatus.RESOLVED
+               && checkInfo.status !== awaitStatus.WAITING
+               && checkInfo.status !== awaitStatus.BLOCKED
+               && checkInfo.status !== awaitStatus.UNCHECKED) {
         throw new Error(`Await 'checks' function had unexpected status '${checkInfo.status}'. Use 'awaitStatus' constants.`)
       }
     }
@@ -84,8 +84,8 @@ const runReport = (name, checks, props) => {
   // notice the summaries are processed seperately so they'll end up sorted as
   // well
   const summaries = checksInfo.map((checkInfo) =>
-      checkInfo.summary ? checkInfo.summary : null
-    )
+    checkInfo.summary ? checkInfo.summary : null
+  )
     .filter((summary) => summary !== null)
 
   return {
@@ -110,8 +110,8 @@ const Await = ({
   const [ prevReport, setPrevReport ] = useState(report)
 
   useEffect(() => {
-    if (reportHandler &&
-        (report === prevReport // first time through
+    if (reportHandler
+        && (report === prevReport // first time through
          || !isEqual(report, prevReport))) { // report has changed
       reportHandler(report)
     }

@@ -197,14 +197,14 @@ describe('Await', () => {
     expect(testHandler).toHaveBeenCalledTimes(1)
 
     rerender(
-      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp={true}>
+      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp>
         { noOpChild }
       </Await>
     )
     expect(testHandler).toHaveBeenCalledTimes(1)
 
     rerender(
-      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp={true}>
+      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
         { noOpChild }
       </Await>
     )
@@ -213,8 +213,8 @@ describe('Await', () => {
 
   test('default report renders multiple summaraies as an unordered list', () => {
     const checks = [
-      () => ({ status: awaitStatus.WAITING, summary: "Waiting on foo..." }),
-      () => ({ status: awaitStatus.WAITING, summary: "Waiting on bar..." })
+      () => ({ status : awaitStatus.WAITING, summary : "Waiting on foo..." }),
+      () => ({ status : awaitStatus.WAITING, summary : "Waiting on bar..." })
     ]
 
     const { container } = render(
@@ -232,7 +232,7 @@ describe('Await', () => {
     try {
       expect(() => render(<Await checks={[() => true]}>{noOpChild}</Await>))
         .toThrow(new RegExp(msgs.badCheckReturn))
-      expect(() => render(<Await checks={[() => ({ status: 'foo'})]}>{noOpChild}</Await>))
+      expect(() => render(<Await checks={[() => ({ status : 'foo'})]}>{noOpChild}</Await>))
         .toThrow(/Use 'awaitStatus' constants/)
     }
     finally { console.error.mockRestore() }
