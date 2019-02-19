@@ -1,12 +1,25 @@
 /* global afterEach, describe, expect, jest, test */
 import React from 'react'
-import { render, cleanup } from 'react-testing-library'
+import { cleanup, render } from 'react-testing-library'
 
 import { Await, awaitStatus } from './Await'
+import * as msgs from './msgs'
 
 const waitingCheck = () => ({ status : awaitStatus.WAITING })
 const resolvedCheck = () => ({ status : awaitStatus.RESOLVED })
-const noOpChild = () => null
+const blockedCheck = () => ({ status : awaitStatus.BLOCKED })
+const noOpChild = jest.fn(() => null)
+const testSpinner = jest.fn(() => null)
+const testBlocked = jest.fn(() => null)
+const spinnerAndBlocked = {
+  spinner : testSpinner,
+  blocked : testBlocked
+}
+const expectChildSpinnerBlocked = (childN, spinnerN, blockedN) => {
+  expect(noOpChild).toHaveBeenCalledTimes(childN)
+  expect(testSpinner).toHaveBeenCalledTimes(spinnerN)
+  expect(testBlocked).toHaveBeenCalledTimes(blockedN)
+}
 
 describe('Await', () => {
   jest.useFakeTimers()
@@ -36,15 +49,48 @@ describe('Await', () => {
   })
 
   test('renders the spinner function once on initially unresolved render', () => {
-    const spinner = jest.fn(() => null)
     render(
-      <Await name="test" spinner={spinner} checks={[ waitingCheck ]}>{noOpChild}</Await>
+      <Await name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
+        {noOpChild}
+      </Await>
     )
     // Note that since react-testing-library wraps the 'render' with 'act',
     // enqued effects are guaranteed to run before exiting the render, so this
     // is a good test in-so-far as it's waiting on the 'useEffect' and not just
     // racing with the initial render.
-    expect(spinner).toHaveBeenCalledTimes(1)
+    expectChildSpinnerBlocked(0, 1, 0)
+  })
+
+  test('renders blocker on initially blocked status', () => {
+    render(
+      <Await name="test" {...spinnerAndBlocked} checks={[ blockedCheck ]}>
+        {noOpChild}
+      </Await>
+    )
+    expectChildSpinnerBlocked(0, 0, 1)
+  })
+
+  test('transitions through all states cleanly', () => {
+    const { rerender } = render(
+      <Await name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
+        {noOpChild}
+      </Await>
+    )
+    expectChildSpinnerBlocked(0, 1, 0)
+
+    rerender(
+      <Await name="test" {...spinnerAndBlocked} checks={[ blockedCheck ]}>
+        {noOpChild}
+      </Await>
+    )
+    expectChildSpinnerBlocked(0, 1, 1)
+
+    rerender(
+      <Await name="test" {...spinnerAndBlocked} checks={[ resolvedCheck ]}>
+        {noOpChild}
+      </Await>
+    )
+    expectChildSpinnerBlocked(1, 1, 1)
   })
 
   test('processes an initially resolved check without setting interval', () => {
@@ -134,10 +180,84 @@ describe('Await', () => {
         { noOpChild }
       </Await>
     )
-    expect(report).toBe(null)
+    expect(report).toBeNull()
     jest.advanceTimersByTime(500)
-    expect(report).toBe(null)
+    expect(report).toBeNull()
     jest.advanceTimersByTime(500)
     expect(report).toBe('test is waiting.')
+  })
+
+  test("invokes 'reportHandler' only on initial run and when report changes", () => {
+    const testHandler = jest.fn()
+    const { rerender } = render(
+      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp={false}>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(2)
+
+    rerender(
+      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(2)
+  })
+
+  test('default report renders multiple summaraies as an unordered list', () => {
+    const checks = [
+      () => ({ status : awaitStatus.WAITING, summary : "Waiting on foo..." }),
+      () => ({ status : awaitStatus.WAITING, summary : "Waiting on bar..." })
+    ]
+
+    const { container } = render(
+      <Await name="test" checks={checks}>
+        { noOpChild }
+      </Await>
+    )
+
+    expect(container.querySelectorAll('ul')).toHaveLength(1)
+    expect(container.querySelectorAll('li')).toHaveLength(2)
+  })
+
+  test("throws error if 'checks' functions return invalid", () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      expect(() => render(<Await checks={[() => true]}>{noOpChild}</Await>))
+        .toThrow(new RegExp(msgs.badCheckReturn))
+      expect(() => render(<Await checks={[() => ({ status : 'foo' })]}>{noOpChild}</Await>))
+        .toThrow(/Use 'awaitStatus' constants/)
+    }
+    finally { console.error.mockRestore() } // eslint-disable-line no-console
+  })
+
+  test("recognize invalid 'checks' props", () => {
+    let report
+    jest.spyOn(console, 'error').mockImplementation((msg) => report = msg)
+    try {
+      let test = <Await>{noOpChild}</Await> //eslint-disable-line no-unused-vars
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+      test = <Await checks={null}>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+      test = <Await checks={[]}>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+      test = <Await checks={['not a function']}>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+    }
+    finally { console.error.mockRestore() } // eslint-disable-line no-console
   })
 })

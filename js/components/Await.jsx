@@ -2,10 +2,20 @@
  * Await will display the `spinner`, `blocked`, or `children` render props based
  * on results of running the `awaitChceks` functions, with a net result
  * 'waiting', 'blocked', or 'resolved' corresponding to each render prop.
+ *
+ * `followupHandler` is invoked if the status effective status remains un-
+ * resolved after `followupWait` miliseconds (defaults to 3000 == 3 seconds).
+ *
+ * The `checks` are run synchronously on every render cycle and so should be
+ * fast. This is done to keep the component simple while avoiding unecessary
+ * re-renders that `useState` would entail. In future, we may provide a more
+ * complicated alternate component that runs the checks asynchronously in
+ * order to support expensive checks.
  */
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import isEqual from 'lodash.isequal'
+import * as msgs from './msgs'
 
 // The stati are powers of 2 so we can bit-or them.
 const awaitStatus = {
@@ -22,12 +32,10 @@ const awaitStatusToString = {
   [awaitStatus.RESOLVED]  : 'Resolved'
 }
 
-const defaultFollowupHandler = (report) => {
-  if (report.finalStatus !== awaitStatus.RESOLVED) {
-    window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
-      report.summaries.join("\n\t"))
-  }
-}
+// Default handler invoked if
+const defaultFollowupHandler = (report) =>
+  window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
+    report.summaries.join("\n\t"))
 
 const defaultFollowupWait = 3000 //ms = 3 seconds
 
@@ -35,17 +43,15 @@ const defaultReportHandler = null
 
 // TODO: colorize the report
 const defaultReportDisplay = (report) =>
-  report === null
-    ? 'Waiting...'
-    : report.summaries.length === 0
-      ? `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`
-      : report.summaries.length === 1
-        ? `${report.name} ${report.summaries[0]}`
-        : (<div>{`${report.name}:`}
-          <ul>
-            { report.summaries.map((summary) => (<li>{summary}</li>)) }
-          </ul>
-        </div>)
+  report.summaries.length === 0
+    ? `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`
+    : report.summaries.length === 1
+      ? `${report.name} ${report.summaries[0]}`
+      : (<div>{`${report.name}:`}
+        <ul>
+          { report.summaries.map((summary) => (<li key={summary}>{summary}</li>)) }
+        </ul>
+      </div>)
 
 const defaultSpinner = defaultReportDisplay
 const defaultBlocked = defaultReportDisplay
@@ -58,6 +64,18 @@ const runReport = (name, checks, props) => {
 
   const checksInfo = checks.map((check) => {
     const checkInfo = check(props)
+    if (process.env.NODE_ENV !== 'production') {
+      if (typeof checkInfo !== 'object') {
+        throw new Error(msgs.badCheckReturn)
+      }
+      else if (checkInfo.status !== awaitStatus.RESOLVED
+               && checkInfo.status !== awaitStatus.WAITING
+               && checkInfo.status !== awaitStatus.BLOCKED
+               && checkInfo.status !== awaitStatus.UNCHECKED) {
+        throw new Error(`Await 'checks' function had unexpected status '${checkInfo.status}'. Use 'awaitStatus' constants.`)
+      }
+    }
+
     if (checkInfo.status < finalStatus) finalStatus = checkInfo.status
     return checkInfo
   })
@@ -88,27 +106,24 @@ const Await = ({
   if (followupWait === undefined) followupWait = defaultFollowupWait
   if (reportHandler === undefined) reportHandler = defaultReportHandler
 
-  // We could run the report on every render and avoid soving it to state, but
-  // this way we can avoid re-running in some cases when it it's not necessary
-  // (like when the 'props' but not 'checkProps' are changed).
-  const [ report, setReport ] = useState(null)
-  // The 'initialReport' allows us to provide a report in the first render as
-  // the report generated in the following 'useEffect' is created post first
-  // render. This avoids 'blinking content'.
-  const initialReport = report === null ? runReport(name, checks, checkProps) : null
+  const report = runReport(name, checks, checkProps)
+  const [ prevReport, setPrevReport ] = useState(report)
+
   useEffect(() => {
-    const newReport = runReport(name, checks, checkProps)
-    if ((report !== null && !isEqual(report, newReport))
-        || (initialReport !== null && !isEqual(initialReport, newReport))) {
-      setReport(newReport)
+    const reportChanged = report !== prevReport && !isEqual(report, prevReport)
+
+    if (reportHandler) {
+      // first time through or report has changed
+      if (report === prevReport || reportChanged) reportHandler(report)
+      if (reportChanged) setPrevReport(report)
+      // else, if no report handler, no reason to save the report and trigger
+      // unecessary re-render
     }
-    if (reportHandler) reportHandler(newReport)
+
 
     let followupInterval = null
-    if (followupHandler) {
-      if (newReport.finalStatus !== awaitStatus.RESOLVED) {
-        followupInterval = setInterval(() => followupHandler(newReport), followupWait)
-      }
+    if (followupHandler && report.finalStatus !== awaitStatus.RESOLVED) {
+      followupInterval = setInterval(() => followupHandler(report), followupWait)
     }
 
     return () => {
@@ -116,29 +131,28 @@ const Await = ({
     }
   },
   [name, checks, reportHandler, followupHandler, followupWait, checkProps])
-
   // Pick the render prop to render.
-  // TODO: '(initialReport || report)' should NEVER be null. If so, then that's
-  // a program error and should raise an excption or something.
-  if ((initialReport || report) !== null
-      && (initialReport || report).finalStatus === awaitStatus.RESOLVED) {
+  if (report !== null
+      && report.finalStatus === awaitStatus.RESOLVED) {
     return typeof children === 'function' ? children(props) : children
   }
-  else if ((initialReport && report) === null
-           || (initialReport || report).finalStatus === awaitStatus.WAITING) {
-    return spinner(initialReport || report)
+  else if (report !== null
+           && (report.finalStatus === awaitStatus.WAITING
+               || report.finalStatus === awaitStatus.UNCHECKED)) {
+    return spinner(report)
   }
-  else { // status is either BLOCKED or UNCHECKED
-    return blocked(initialReport || report)
+  else { // status is either BLOCKED or reports are both null (bad checks)
+    return blocked(report)
   }
 }
 
+/* istanbul ignore next */ // TODO: seems to have no effect
 if (process.env.NODE_ENV !== 'production') {
   const checksValidator = (props, propName, componentName) => {
     if (!Array.isArray(props[propName])
         || props[propName].length === 0
-        || !props[propName].every((i) => typeof i === "function")) {
-      return new Error(`${propName} must be an array of at least one function.`);
+        || props[propName].some((i) => typeof i !== 'function')) {
+      return new Error(`${propName} ${msgs.checksRequirement}`);
     }
   }
   Await.propTypes = {
