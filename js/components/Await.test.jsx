@@ -40,12 +40,10 @@ describe('Await', () => {
     render(
       <Await name="test" spinner={spinner} checks={[ waitingCheck ]}>{noOpChild}</Await>
     )
-    // TODO: in testing, this test was effective in that if the condition around
-    // 'setReport' is removed, the spinner is called twice. But it's not clear
-    // to me that there's not a race condition here. Need to dig into the
-    // react-testing-library docs to verify that the 'useEffect' will get
-    // get triggered before we get here or introduce a mechanism to guarantee
-    // that rendering has 'settled' if not.
+    // Note that since react-testing-library wraps the 'render' with 'act',
+    // enqued effects are guaranteed to run before exiting the render, so this
+    // is a good test in-so-far as it's waiting on the 'useEffect' and not just
+    // racing with the initial render.
     expect(spinner).toHaveBeenCalledTimes(1)
   })
 
