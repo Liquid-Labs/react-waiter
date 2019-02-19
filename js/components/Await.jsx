@@ -3,6 +3,9 @@
  * on results of running the `awaitChceks` functions, with a net result
  * 'waiting', 'blocked', or 'resolved' corresponding to each render prop.
  *
+ * `followupHandler` is invoked if the status effective status remains un-
+ * resolved after `followupWait` miliseconds (defaults to 3000 == 3 seconds).
+ *
  * The `checks` are run synchronously on every render cycle and so should be
  * fast. This is done to keep the component simple while avoiding unecessary
  * re-renders that `useState` would entail. In future, we may provide a more
@@ -29,12 +32,10 @@ const awaitStatusToString = {
   [awaitStatus.RESOLVED]  : 'Resolved'
 }
 
-const defaultFollowupHandler = (report) => {
-  if (report.finalStatus !== awaitStatus.RESOLVED) {
-    window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
-      report.summaries.join("\n\t"))
-  }
-}
+// Default handler invoked if
+const defaultFollowupHandler = (report) =>
+  window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
+    report.summaries.join("\n\t"))
 
 const defaultFollowupWait = 3000 //ms = 3 seconds
 
@@ -42,17 +43,15 @@ const defaultReportHandler = null
 
 // TODO: colorize the report
 const defaultReportDisplay = (report) =>
-  report === null
-    ? 'Waiting...'
-    : report.summaries.length === 0
-      ? `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`
-      : report.summaries.length === 1
-        ? `${report.name} ${report.summaries[0]}`
-        : (<div>{`${report.name}:`}
-          <ul>
-            { report.summaries.map((summary) => (<li key={summary}>{summary}</li>)) }
-          </ul>
-        </div>)
+  report.summaries.length === 0
+    ? `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`
+    : report.summaries.length === 1
+      ? `${report.name} ${report.summaries[0]}`
+      : (<div>{`${report.name}:`}
+        <ul>
+          { report.summaries.map((summary) => (<li key={summary}>{summary}</li>)) }
+        </ul>
+      </div>)
 
 const defaultSpinner = defaultReportDisplay
 const defaultBlocked = defaultReportDisplay
@@ -142,6 +141,7 @@ const Await = ({
   }
 }
 
+/* istanbul ignore next */ // TODO: seems to have no effect
 if (process.env.NODE_ENV !== 'production') {
   const checksValidator = (props, propName, componentName) => {
     if (!Array.isArray(props[propName])

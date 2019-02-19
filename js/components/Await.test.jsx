@@ -180,9 +180,9 @@ describe('Await', () => {
         { noOpChild }
       </Await>
     )
-    expect(report).toBe(null)
+    expect(report).toBeNull()
     jest.advanceTimersByTime(500)
-    expect(report).toBe(null)
+    expect(report).toBeNull()
     jest.advanceTimersByTime(500)
     expect(report).toBe('test is waiting.')
   })
@@ -252,20 +252,5 @@ describe('Await', () => {
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
     }
     finally { console.error.mockRestore() }
-  })
-
-  test("skip prop checks in production", () => {
-    let report = null
-    jest.spyOn(console, 'error').mockImplementation((msg) => report = msg)
-    const currEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
-    try {
-      <Await>{noOpChild}</Await>
-      expect(report).toBeNull()
-    }
-    finally {
-      console.error.mockRestore()
-      process.env.NODE_ENV = currEnv
-    }
   })
 })
