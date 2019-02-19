@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/react-await",
-  "version": "1.0.0-prototype.3",
+  "version": "1.0.0-prototype.4",
   "description": "Hook, render-component, and HOC for rendering \"loading\" messages or other actions based on one or more dynamic conditions.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
