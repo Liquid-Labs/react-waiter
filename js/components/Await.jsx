@@ -110,11 +110,16 @@ const Await = ({
   const [ prevReport, setPrevReport ] = useState(report)
 
   useEffect(() => {
-    if (reportHandler
-        && (report === prevReport // first time through
-         || !isEqual(report, prevReport))) { // report has changed
-      reportHandler(report)
+    const reportChanged = report !== prevReport && !isEqual(report, prevReport)
+
+    if (reportHandler) {
+      // first time through or report has changed
+      if (report === prevReport || reportChanged) reportHandler(report)
+      if (reportChanged) setPrevReport(report)
+      // else, if no report handler, no reason to save the report and trigger
+      // unecessary re-render
     }
+
 
     let followupInterval = null
     if (followupHandler && report.finalStatus !== awaitStatus.RESOLVED) {

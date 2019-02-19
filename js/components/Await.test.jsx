@@ -209,6 +209,13 @@ describe('Await', () => {
       </Await>
     )
     expect(testHandler).toHaveBeenCalledTimes(2)
+
+    rerender(
+      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(2)
   })
 
   test('default report renders multiple summaraies as an unordered list', () => {
