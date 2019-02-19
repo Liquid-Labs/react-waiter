@@ -35,6 +35,20 @@ describe('Await', () => {
     expect(getByTestId('content').textContent).toBe(content)
   })
 
+  test('renders the spinner function once on initially unresolved render', () => {
+    const spinner = jest.fn(() => null)
+    render(
+      <Await name="test" spinner={spinner} checks={[ waitingCheck ]}>{noOpChild}</Await>
+    )
+    // TODO: in testing, this test was effective in that if the condition around
+    // 'setReport' is removed, the spinner is called twice. But it's not clear
+    // to me that there's not a race condition here. Need to dig into the
+    // react-testing-library docs to verify that the 'useEffect' will get
+    // get triggered before we get here or introduce a mechanism to guarantee
+    // that rendering has 'settled' if not.
+    expect(spinner).toHaveBeenCalledTimes(1)
+  })
+
   test('processes an initially resolved check without setting interval', () => {
     render(
       <Await name="test" checks={[ resolvedCheck ]}>{noOpChild}</Await>
