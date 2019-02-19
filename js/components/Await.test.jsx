@@ -1,6 +1,6 @@
 /* global afterEach, describe, expect, jest, test */
 import React from 'react'
-import { cleanup, render, queryAllBy } from 'react-testing-library'
+import { cleanup, render } from 'react-testing-library'
 
 import { Await, awaitStatus } from './Await'
 import * as msgs from './msgs'
@@ -239,17 +239,17 @@ describe('Await', () => {
     try {
       expect(() => render(<Await checks={[() => true]}>{noOpChild}</Await>))
         .toThrow(new RegExp(msgs.badCheckReturn))
-      expect(() => render(<Await checks={[() => ({ status : 'foo'})]}>{noOpChild}</Await>))
+      expect(() => render(<Await checks={[() => ({ status : 'foo' })]}>{noOpChild}</Await>))
         .toThrow(/Use 'awaitStatus' constants/)
     }
-    finally { console.error.mockRestore() }
+    finally { console.error.mockRestore() } // eslint-disable-line no-console
   })
 
   test("recognize invalid 'checks' props", () => {
     let report
     jest.spyOn(console, 'error').mockImplementation((msg) => report = msg)
     try {
-      let test = <Await>{noOpChild}</Await>
+      let test = <Await>{noOpChild}</Await> //eslint-disable-line no-unused-vars
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
       test = <Await checks={null}>{noOpChild}</Await>
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
@@ -258,6 +258,6 @@ describe('Await', () => {
       test = <Await checks={['not a function']}>{noOpChild}</Await>
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
     }
-    finally { console.error.mockRestore() }
+    finally { console.error.mockRestore() } // eslint-disable-line no-console
   })
 })
