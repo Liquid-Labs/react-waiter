@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import isEqual from 'lodash.isequal'
 
 // The stati are powers of 2 so we can bit-or them.
 const awaitStatus = {
@@ -97,7 +98,10 @@ const Await = ({
   const initialReport = report === null ? runReport(name, checks, checkProps) : null
   useEffect(() => {
     const newReport = runReport(name, checks, checkProps)
-    setReport(newReport)
+    if ((report !== null && !isEqual(report, newReport))
+        || (initialReport !== null && !isEqual(initialReport, newReport))) {
+      setReport(newReport)
+    }
     if (reportHandler) reportHandler(newReport)
 
     let followupInterval = null
