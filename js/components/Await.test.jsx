@@ -70,7 +70,7 @@ describe('Await', () => {
     expectChildSpinnerBlocked(0, 0, 1)
   })
 
-  test('renders blocked on error after initially waiting', () => {
+  test('transitions through all states cleanly', () => {
     const { rerender } = render(
       <Await name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
         {noOpChild}
@@ -84,6 +84,13 @@ describe('Await', () => {
       </Await>
     )
     expectChildSpinnerBlocked(0, 1, 1)
+
+    rerender(
+      <Await name="test" {...spinnerAndBlocked} checks={[ resolvedCheck ]}>
+        {noOpChild}
+      </Await>
+    )
+    expectChildSpinnerBlocked(1, 1, 1)
   })
 
   test('processes an initially resolved check without setting interval', () => {
@@ -180,6 +187,30 @@ describe('Await', () => {
     expect(report).toBe('test is waiting.')
   })
 
+  test("invokes 'reportHandler' only on initial run and when report changes", () => {
+    const testHandler = jest.fn()
+    const { rerender } = render(
+      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp={false}>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp={true}>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp={true}>
+        { noOpChild }
+      </Await>
+    )
+    expect(testHandler).toHaveBeenCalledTimes(2)
+  })
+
   test('default report renders multiple summaraies as an unordered list', () => {
     const checks = [
       () => ({ status: awaitStatus.WAITING, summary: "Waiting on foo..." }),
@@ -205,5 +236,36 @@ describe('Await', () => {
         .toThrow(/Use 'awaitStatus' constants/)
     }
     finally { console.error.mockRestore() }
+  })
+
+  test("recognize invalid 'checks' props", () => {
+    let report
+    jest.spyOn(console, 'error').mockImplementation((msg) => report = msg)
+    try {
+      let test = <Await>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+      test = <Await checks={null}>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+      test = <Await checks={[]}>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+      test = <Await checks={['not a function']}>{noOpChild}</Await>
+      expect(report).toMatch(new RegExp(msgs.checksRequirement))
+    }
+    finally { console.error.mockRestore() }
+  })
+
+  test("skip prop checks in production", () => {
+    let report = null
+    jest.spyOn(console, 'error').mockImplementation((msg) => report = msg)
+    const currEnv = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    try {
+      <Await>{noOpChild}</Await>
+      expect(report).toBeNull()
+    }
+    finally {
+      console.error.mockRestore()
+      process.env.NODE_ENV = currEnv
+    }
   })
 })
