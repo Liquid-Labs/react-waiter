@@ -61,6 +61,7 @@ const defaultBlocked = defaultReportDisplay
  */
 const runReport = (name, checks, props) => {
   let finalStatus = awaitStatus.RESOLVED
+  const errorMessages = []
 
   const checksInfo = checks.map((check) => {
     const checkInfo = check(props)
@@ -76,7 +77,9 @@ const runReport = (name, checks, props) => {
       }
     }
 
+    // calculate the 'finalStatus' for the checks as a group.
     if (checkInfo.status < finalStatus) finalStatus = checkInfo.status
+    if (checkInfo.errorMessage) errorMessages.push(checkInfo.errorMessage)
     return checkInfo
   })
     .sort((a, b) =>
@@ -89,10 +92,11 @@ const runReport = (name, checks, props) => {
     .filter((summary) => summary !== null)
 
   return {
-    name        : name,
-    finalStatus : finalStatus,
-    checksInfo  : checksInfo,
-    summaries   : summaries
+    name         : name,
+    finalStatus  : finalStatus,
+    checksInfo   : checksInfo,
+    summaries    : summaries,
+    errorMessage : errorMessages.join("\n")
   }
 }
 
@@ -119,7 +123,6 @@ const Await = ({
       // else, if no report handler, no reason to save the report and trigger
       // unecessary re-render
     }
-
 
     let followupInterval = null
     if (followupHandler && report.finalStatus !== awaitStatus.RESOLVED) {
