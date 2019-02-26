@@ -101,14 +101,14 @@ const runReport = (name, checks, props) => {
 }
 
 const Await = ({
-    name, checks, checkProps,
-    spinner=defaultSpinner,
-    blocked=defaultBlocked,
-    reportHandler=null,
-    followupHandler=defaultFollowupHandler,
-    followupWait=3000,
-    followupMax=3,
-    children, ...props}) => {
+  name, checks, checkProps,
+  spinner=defaultSpinner,
+  blocked=defaultBlocked,
+  reportHandler=null,
+  followupHandler=defaultFollowupHandler,
+  followupWait=3000,
+  followupMax=3,
+  children, ...props}) => {
   const report = runReport(name, checks, checkProps)
   const [ prevReport, setPrevReport ] = useState(report)
   const [ followupCount, setFollowupCount ] = useState(0)
@@ -129,11 +129,11 @@ const Await = ({
         && report.finalStatus !== awaitStatus.RESOLVED
         && followupCount < followupMax) {
       const followupTimeout = setTimeout(() => {
-          followupHandler(report, followupCount+1, followupMax)
-          // this will trigger the next followup, until followupMax
-          setFollowupCount(followupCount + 1)
-        },
-        followupWait)
+        followupHandler(report, followupCount+1, followupMax)
+        // this will trigger the next followup, until followupMax
+        setFollowupCount(followupCount + 1)
+      },
+      followupWait)
       return () => clearTimeout(followupTimeout)
     }
   },
