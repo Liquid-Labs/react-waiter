@@ -33,13 +33,13 @@ const awaitStatusToString = {
 }
 
 // Default handler invoked if
-const defaultFollowupHandler = (report) =>
-  window.alert(`${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
-    report.summaries.join("\n\t"))
-
-const defaultFollowupWait = 3000 //ms = 3 seconds
-
-const defaultReportHandler = null
+const defaultFollowupHandler = (report, followupCount, followupMax) =>
+  window.alert(
+    `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
+    report.summaries.join("\n\t"),
+    followupCount < followupMax
+      ? `Warning #${followupCount}.`
+      : 'Last warning.')
 
 // TODO: colorize the report
 const defaultReportDisplay = (report) =>
@@ -101,18 +101,19 @@ const runReport = (name, checks, props) => {
 }
 
 const Await = ({
-  name, checks, checkProps, spinner, blocked, reportHandler, followupHandler, followupWait,
+  name, checks, checkProps,
+  spinner=defaultSpinner,
+  blocked=defaultBlocked,
+  reportHandler=null,
+  followupHandler=defaultFollowupHandler,
+  followupWait=3000,
+  followupMax=3,
   children, ...props}) => {
-  // set default for optional properties
-  if (spinner === undefined) spinner = defaultSpinner
-  if (blocked === undefined) blocked = defaultBlocked
-  if (followupHandler === undefined) followupHandler = defaultFollowupHandler
-  if (followupWait === undefined) followupWait = defaultFollowupWait
-  if (reportHandler === undefined) reportHandler = defaultReportHandler
-
   const report = runReport(name, checks, checkProps)
   const [ prevReport, setPrevReport ] = useState(report)
+  const [ followupCount, setFollowupCount ] = useState(0)
 
+  // Call the 'reportHandler' and 'followupHandler' as needed.
   useEffect(() => {
     const reportChanged = report !== prevReport && !isEqual(report, prevReport)
 
@@ -124,16 +125,19 @@ const Await = ({
       // unecessary re-render
     }
 
-    let followupInterval = null
-    if (followupHandler && report.finalStatus !== awaitStatus.RESOLVED) {
-      followupInterval = setInterval(() => followupHandler(report), followupWait)
-    }
-
-    return () => {
-      if (followupInterval !== null) clearInterval(followupInterval)
+    if (followupHandler
+        && report.finalStatus !== awaitStatus.RESOLVED
+        && followupCount < followupMax) {
+      const followupTimeout = setTimeout(() => {
+        followupHandler(report, followupCount+1, followupMax)
+        // this will trigger the next followup, until followupMax
+        setFollowupCount(followupCount + 1)
+      },
+      followupWait)
+      return () => clearTimeout(followupTimeout)
     }
   },
-  [name, checks, reportHandler, followupHandler, followupWait, checkProps])
+  [name, checks, reportHandler, followupCount, followupHandler, followupMax, followupWait, checkProps])
   // Pick the render prop to render.
   if (report !== null
       && report.finalStatus === awaitStatus.RESOLVED) {
