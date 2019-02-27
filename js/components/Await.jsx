@@ -78,6 +78,11 @@ const runReport = (name, checks, props) => {
     }
 
     // calculate the 'finalStatus' for the checks as a group.
+    if (checkInfo.status === awaitStatus.BLOCKED
+        && checkInfo.errorMessage === undefined
+        && checkInfo.summary) {
+      checkInfo.errorMessage = `${name} ${checkInfo.summary}`
+    }
     if (checkInfo.status < finalStatus) finalStatus = checkInfo.status
     if (checkInfo.errorMessage) errorMessages.push(checkInfo.errorMessage)
     return checkInfo
