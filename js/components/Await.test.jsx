@@ -1,4 +1,4 @@
-/* global afterEach, describe, expect, jest, test */
+/* global afterEach beforeEach describe expect jest test */
 import React from 'react'
 import { act, cleanup, render } from 'react-testing-library'
 
@@ -33,6 +33,7 @@ describe('Await', () => {
   // Without the cleanup, you can see strang effects, like the 'getByTestId' in
   // the "can render [a function|alement]" tests are entangled. It seems
   // react-testing-library uses the same DOM for subsequent tests.
+  beforeEach(() => window.alert = jest.fn())
   afterEach(cleanup)
 
   test("can render a function child", () => {
@@ -110,28 +111,43 @@ describe('Await', () => {
     expect(followupTimeoutCallCount()).toBe(0)
   })
 
-  test('clears interval after initially unresolved check resolves and is stable thereafter', () => {
-    // This was originally two tests, but everything to the second re-render
-    // would be the same, so might as well hit both.
+  test("'followupHandler' is not invoked after initially wait resolves", () => {
+    const followupTester = jest.fn()
     let checks = [ waitingCheck ]
 
     const { rerender } = render(
-      <Await name="test" checks={checks} followupWait={followupWaitMarker}>{ noOpChild }</Await>
+      <Await name="test"
+          checks={checks}
+          followupHandler={followupTester}
+          followupWait={followupWaitMarker}>
+        {noOpChild}
+      </Await>
     )
     expect((followupTimeoutCallCount())).toBe(1)
     expect(clearTimeout).toHaveBeenCalledTimes(0)
     checks = [ resolvedCheck ]
     rerender(
-      <Await name="test" checks={checks} followupWait={followupWaitMarker}>{ noOpChild }</Await>
+      <Await name="test"
+          checks={checks}
+          followupHandler={followupTester}
+          followupWait={followupWaitMarker}>
+        {noOpChild}
+      </Await>
     )
     expect(followupTimeoutCallCount()).toBe(1)
     expect(clearTimeout).toHaveBeenCalledTimes(1)
     rerender(
-      <Await name="test" checks={checks} followupWait={followupWaitMarker}>{ noOpChild }</Await>
+      <Await name="test"
+          checks={checks}
+          followupHandler={followupTester}
+          followupWait={followupWaitMarker}>
+        {noOpChild}
+      </Await>
     )
-    act(() => jest.advanceTimersByTime(500))
+    act(() => jest.advanceTimersByTime(followupWaitMarker * 3))
     expect(followupTimeoutCallCount()).toBe(1)
     expect(clearTimeout).toHaveBeenCalledTimes(1)
+    expect(followupTester).toHaveBeenCalledTimes(0)
   })
 
   test('interval cleared on unmount', () => {
@@ -147,29 +163,26 @@ describe('Await', () => {
   })
 
   test("'followupHandler' should be called no more than 'followupMax' times", () => {
-    jest.spyOn(window, 'alert').mockImplementation(() => {})
-    try {
-      const checks = [ waitingCheck ]
-
-      render(
-        <Await name="test" checks={checks}
-            followupWait={followupWaitMarker}
-            followupMax={3}>
-          { noOpChild }
-        </Await>
-      )
-      act(() => jest.advanceTimersByTime(followupWaitMarker))
-      expect(window.alert).toHaveBeenCalledTimes(1)
-      act(() => jest.advanceTimersByTime(followupWaitMarker))
-      expect(window.alert).toHaveBeenCalledTimes(2)
-      act(() => jest.advanceTimersByTime(followupWaitMarker))
-      expect(window.alert).toHaveBeenCalledTimes(3)
-      expect(followupTimeoutCallCount()).toBe(3)
-      act(() => jest.advanceTimersByTime(followupWaitMarker))
-      expect(window.alert).toHaveBeenCalledTimes(3)
-      expect(followupTimeoutCallCount()).toBe(3)
-    }
-    finally { window.alert.mockRestore() } // eslint-disable-line no-console
+    const followupTester = jest.fn()
+    const checks = [ waitingCheck ]
+    render(
+      <Await name="test" checks={checks}
+          followupWait={followupWaitMarker}
+          followupHandler={followupTester}
+          followupMax={3}>
+        { noOpChild }
+      </Await>
+    )
+    act(() => jest.advanceTimersByTime(followupWaitMarker))
+    expect(followupTester).toHaveBeenCalledTimes(1)
+    act(() => jest.advanceTimersByTime(followupWaitMarker))
+    expect(followupTester).toHaveBeenCalledTimes(2)
+    act(() => jest.advanceTimersByTime(followupWaitMarker))
+    expect(followupTester).toHaveBeenCalledTimes(3)
+    expect(followupTimeoutCallCount()).toBe(3)
+    act(() => jest.advanceTimersByTime(followupWaitMarker))
+    expect(followupTester).toHaveBeenCalledTimes(3)
+    expect(followupTimeoutCallCount()).toBe(3)
   })
 
   test("'followupHandler' is triggered after the 'followupWait'", () => {
@@ -187,6 +200,38 @@ describe('Await', () => {
     expect(followedUp).toBe(false)
     jest.advanceTimersByTime(500)
     expect(followedUp).toBe(true)
+  })
+
+  test("'followupHandler' is triggered once immediately after blocked, and then no more", () => {
+    const followupTester = jest.fn()
+    let checks = [ waitingCheck ]
+    const { rerender } = render(
+      <Await name="test"
+          checks={checks}
+          followupHandler={followupTester}
+          followupWait={followupWaitMarker}>
+        {noOpChild}
+      </Await>
+    )
+    expect(followupTimeoutCallCount()).toBe(1)
+    expect(followupTester).toHaveBeenCalledTimes(0)
+    act(() => jest.advanceTimersByTime(followupWaitMarker))
+    expect(followupTimeoutCallCount()).toBe(2) // on the initial render, and then after advance
+    expect(followupTester).toHaveBeenCalledTimes(1)
+    checks = [ blockedCheck ]
+    rerender(
+      <Await name="test"
+          checks={checks}
+          followupHandler={followupTester}
+          followupWait={followupWaitMarker}>
+        {noOpChild}
+      </Await>
+    )
+    expect(followupTimeoutCallCount()).toBe(2)
+    expect(followupTester).toHaveBeenCalledTimes(2)
+    act(() => jest.advanceTimersByTime(followupWaitMarker))
+    expect(followupTimeoutCallCount()).toBe(2)
+    expect(followupTester).toHaveBeenCalledTimes(2)
   })
 
   test('report status is ordered by severity', () => {
