@@ -128,13 +128,18 @@ const Await = ({
     if (followupHandler
         && report.finalStatus !== awaitStatus.RESOLVED
         && followupCount < followupMax) {
-      const followupTimeout = setTimeout(() => {
-        followupHandler(report, followupCount+1, followupMax)
-        // this will trigger the next followup, until followupMax
-        setFollowupCount(followupCount + 1)
-      },
-      followupWait)
-      return () => clearTimeout(followupTimeout)
+      if (report.finalStatus === awaitStatus.BLOCKED) {
+        followupHandler(report, followupCount+1, followupCount+1)
+      }
+      else {
+        const followupTimeout = setTimeout(() => {
+          followupHandler(report, followupCount+1, followupMax)
+          // this will trigger the next followup, until followupMax
+          setFollowupCount(followupCount + 1)
+        },
+        followupWait)
+        return () => clearTimeout(followupTimeout)
+      }
     }
   },
   [name, checks, reportHandler, followupCount, followupHandler, followupMax, followupWait, checkProps])
