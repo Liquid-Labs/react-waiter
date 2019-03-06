@@ -1,7 +1,7 @@
 /**
- * Waiter will display the `spinner`, `blocked`, or `children` render props based
+ * Waiter will display the `spinner`, `blocker`, or `children` render props based
  * on results of running the `waiterChceks` functions, with a net result
- * 'waiting', 'blocked', or 'resolved' corresponding to each render prop.
+ * 'waiting', 'blocker', or 'resolved' corresponding to each render prop.
  *
  * `followupHandler` is invoked if the status effective status remains un-
  * resolved after `followupWait` miliseconds (defaults to 3000 == 3 seconds).
@@ -15,46 +15,9 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import isEqual from 'lodash.isequal'
+import * as waiterSettings from '../../settings/settings'
+import { waiterStatus } from '../../utils/status'
 import * as msgs from '../msgs'
-
-// The stati are powers of 2 so we can bit-or them.
-const waiterStatus = {
-  UNCHECKED : 0,
-  BLOCKED   : 1,
-  WAITING   : 2,
-  RESOLVED  : 4,
-}
-
-const waiterStatusToString = {
-  [waiterStatus.UNCHECKED] : 'Unchecked',
-  [waiterStatus.BLOCKED]   : 'Blocked',
-  [waiterStatus.WAITING]   : 'Waiting',
-  [waiterStatus.RESOLVED]  : 'Resolved'
-}
-
-// Default handler invoked if
-const defaultFollowupHandler = (report, followupCount, followupMax) =>
-  window.alert(
-    `${report.name} is ${waiterStatusToString[report.finalStatus].toLowerCase()}.`,
-    report.summaries.join("\n\t"),
-    followupCount < followupMax
-      ? `Warning #${followupCount}.`
-      : 'Last warning.')
-
-// TODO: colorize the report
-const defaultReportDisplay = (report) =>
-  report.summaries.length === 0
-    ? `${report.name} is ${waiterStatusToString[report.finalStatus].toLowerCase()}.`
-    : report.summaries.length === 1
-      ? `${report.name} ${report.summaries[0]}`
-      : (<div>{`${report.name}:`}
-        <ul>
-          { report.summaries.map((summary) => (<li key={summary}>{summary}</li>)) }
-        </ul>
-      </div>)
-
-const defaultSpinner = defaultReportDisplay
-const defaultBlocked = defaultReportDisplay
 
 /**
  * runReport executes the `checks` and assembles a final report object.
@@ -107,13 +70,27 @@ const runReport = (name, checks, props) => {
 
 const Waiter = ({
   name, checks, checkProps,
-  spinner=defaultSpinner,
-  blocked=defaultBlocked,
-  reportHandler=null,
-  followupHandler=defaultFollowupHandler,
-  followupWait=3000,
-  followupMax=3,
+  spinner, blocker,
+  followupHandler, followupWait, followupMax,
+  reportHandler,
   children, ...props}) => {
+  // set defaults from settings for unset options
+  const Spinner = spinner || waiterSettings.getDefaultSpinner()
+  const Blocker = blocker || waiterSettings.getDefaultBlocker()
+  reportHandler = reportHandler || waiterSettings.getDefaultReportHandler()
+  followupHandler = followupHandler || waiterSettings.getDefaultFollowupHandler()
+  followupWait = followupWait !== undefined
+    ? followupWait
+    : waiterSettings.getDefaultFollowupWait()
+  followupMax = followupMax !== undefined
+    ? followupMax
+    : waiterSettings.getDefaultFollowupMax()
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (!Spinner) throw new Error("No 'spinner' defined. Try 'waiterSettings.setDefaultSpinner(...)' or 'basicWaiterSetup()'.")
+    if (!Blocker) throw new Error("No 'blocker' defined. Try 'waiterSettings.setDefaultSpinner(...)' or 'basicWaiterSetup().'")
+  }
+
   const report = runReport(name, checks, checkProps)
   const [ prevReport, setPrevReport ] = useState(report)
   const [ followupCount, setFollowupCount ] = useState(0)
@@ -156,10 +133,10 @@ const Waiter = ({
   else if (report !== null
            && (report.finalStatus === waiterStatus.WAITING
                || report.finalStatus === waiterStatus.UNCHECKED)) {
-    return spinner(report)
+    return (<Spinner report={report} />)
   }
   else { // status is either BLOCKED or reports are both null (bad checks)
-    return blocked(report)
+    return (<Blocker report={report} />)
   }
 }
 
@@ -173,19 +150,16 @@ if (process.env.NODE_ENV !== 'production') {
     }
   }
   Waiter.propTypes = {
-    blocked       : PropTypes.func,
-    checks        : checksValidator,
-    checkProps    : PropTypes.any,
-    children      : PropTypes.oneOfType([PropTypes.node, PropTypes.func]).isRequired,
-    followupWait  : PropTypes.number,
-    reportHandler : PropTypes.func,
-    spinner       : PropTypes.func
+    blocker         : PropTypes.node,
+    checks          : checksValidator,
+    checkProps      : PropTypes.any,
+    children        : PropTypes.oneOfType([PropTypes.node, PropTypes.func]).isRequired,
+    followupHandler : PropTypes.func,
+    followupMax     : PropTypes.number,
+    followupWait    : PropTypes.number,
+    reportHandler   : PropTypes.func,
+    spinner         : PropTypes.node
   }
 }
 
-export {
-  Waiter,
-  waiterStatus,
-  waiterStatusToString,
-  defaultReportDisplay
-}
+export { Waiter }
