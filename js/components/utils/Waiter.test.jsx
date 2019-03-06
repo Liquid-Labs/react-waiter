@@ -2,12 +2,12 @@
 import React from 'react'
 import { act, cleanup, render } from 'react-testing-library'
 
-import { Await, awaitStatus } from './Await'
-import * as msgs from './msgs'
+import { Waiter, waiterStatus } from './Waiter'
+import * as msgs from '../msgs'
 
-const waitingCheck = () => ({ status : awaitStatus.WAITING })
-const resolvedCheck = () => ({ status : awaitStatus.RESOLVED })
-const blockedCheck = () => ({ status : awaitStatus.BLOCKED })
+const waitingCheck = () => ({ status : waiterStatus.WAITING })
+const resolvedCheck = () => ({ status : waiterStatus.RESOLVED })
+const blockedCheck = () => ({ status : waiterStatus.BLOCKED })
 const noOpChild = jest.fn(() => null)
 const testSpinner = jest.fn(() => null)
 const testBlocked = jest.fn(() => null)
@@ -28,7 +28,7 @@ const followupTimeoutCallCount = () =>
       count + (callInfo[1] === followupWaitMarker ? 1 : 0),
     0)
 
-describe('Await', () => {
+describe('Waiter', () => {
   jest.useFakeTimers()
   // Without the cleanup, you can see strang effects, like the 'getByTestId' in
   // the "can render [a function|alement]" tests are entangled. It seems
@@ -39,9 +39,9 @@ describe('Await', () => {
   test("can render a function child", () => {
     const content = "I'm from a func!"
     const { getByTestId } = render(
-      <Await name="test" checks={[ resolvedCheck ]}>
+      <Waiter name="test" checks={[ resolvedCheck ]}>
         { () => <span data-testid="content">{content}</span> }
-      </Await>
+      </Waiter>
     )
     expect(getByTestId('content').textContent).toBe(content)
   })
@@ -49,18 +49,18 @@ describe('Await', () => {
   test("can render element children", () => {
     const content = "I'm from an element!"
     const { getByTestId } = render(
-      <Await name="test" checks={[ resolvedCheck ]}>
+      <Waiter name="test" checks={[ resolvedCheck ]}>
         <span data-testid="content">{content}</span>
-      </Await>
+      </Waiter>
     )
     expect(getByTestId('content').textContent).toBe(content)
   })
 
   test('renders the spinner function once on initially unresolved render', () => {
     render(
-      <Await name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
+      <Waiter name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     // Note that since react-testing-library wraps the 'render' with 'act',
     // enqued effects are guaranteed to run before exiting the render, so this
@@ -71,41 +71,41 @@ describe('Await', () => {
 
   test('renders blocker on initially blocked status', () => {
     render(
-      <Await name="test" {...spinnerAndBlocked} checks={[ blockedCheck ]}>
+      <Waiter name="test" {...spinnerAndBlocked} checks={[ blockedCheck ]}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expectChildSpinnerBlocked(0, 0, 1)
   })
 
   test('transitions through all states cleanly', () => {
     const { rerender } = render(
-      <Await name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
+      <Waiter name="test" {...spinnerAndBlocked} checks={[ waitingCheck ]}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expectChildSpinnerBlocked(0, 1, 0)
 
     rerender(
-      <Await name="test" {...spinnerAndBlocked} checks={[ blockedCheck ]}>
+      <Waiter name="test" {...spinnerAndBlocked} checks={[ blockedCheck ]}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expectChildSpinnerBlocked(0, 1, 1)
 
     rerender(
-      <Await name="test" {...spinnerAndBlocked} checks={[ resolvedCheck ]}>
+      <Waiter name="test" {...spinnerAndBlocked} checks={[ resolvedCheck ]}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expectChildSpinnerBlocked(1, 1, 1)
   })
 
   test('processes an initially resolved check without setting followup timeout', () => {
     render(
-      <Await name="test" checks={[ resolvedCheck ]} followupWait={followupWaitMarker}>
+      <Waiter name="test" checks={[ resolvedCheck ]} followupWait={followupWaitMarker}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
 
     expect(followupTimeoutCallCount()).toBe(0)
@@ -116,33 +116,33 @@ describe('Await', () => {
     let checks = [ waitingCheck ]
 
     const { rerender } = render(
-      <Await name="test"
+      <Waiter name="test"
           checks={checks}
           followupHandler={followupTester}
           followupWait={followupWaitMarker}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expect((followupTimeoutCallCount())).toBe(1)
     expect(clearTimeout).toHaveBeenCalledTimes(0)
     checks = [ resolvedCheck ]
     rerender(
-      <Await name="test"
+      <Waiter name="test"
           checks={checks}
           followupHandler={followupTester}
           followupWait={followupWaitMarker}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expect(followupTimeoutCallCount()).toBe(1)
     expect(clearTimeout).toHaveBeenCalledTimes(1)
     rerender(
-      <Await name="test"
+      <Waiter name="test"
           checks={checks}
           followupHandler={followupTester}
           followupWait={followupWaitMarker}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     act(() => jest.advanceTimersByTime(followupWaitMarker * 3))
     expect(followupTimeoutCallCount()).toBe(1)
@@ -154,7 +154,7 @@ describe('Await', () => {
     const checks = [ waitingCheck ]
 
     const { unmount } = render(
-      <Await name="test" checks={checks} followupWait={followupWaitMarker}>{ noOpChild }</Await>
+      <Waiter name="test" checks={checks} followupWait={followupWaitMarker}>{ noOpChild }</Waiter>
     )
     expect(followupTimeoutCallCount()).toBe(1)
     expect(clearTimeout).toHaveBeenCalledTimes(0)
@@ -166,12 +166,12 @@ describe('Await', () => {
     const followupTester = jest.fn()
     const checks = [ waitingCheck ]
     render(
-      <Await name="test" checks={checks}
+      <Waiter name="test" checks={checks}
           followupWait={followupWaitMarker}
           followupHandler={followupTester}
           followupMax={3}>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     act(() => jest.advanceTimersByTime(followupWaitMarker))
     expect(followupTester).toHaveBeenCalledTimes(1)
@@ -190,10 +190,10 @@ describe('Await', () => {
     const followupHandler = () => followedUp = true
 
     render(
-      <Await name="test" checks={[ waitingCheck ]} followupWait={1000}
+      <Waiter name="test" checks={[ waitingCheck ]} followupWait={1000}
           followupHandler={followupHandler}>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(followedUp).toBe(false)
     jest.advanceTimersByTime(500)
@@ -206,12 +206,12 @@ describe('Await', () => {
     const followupTester = jest.fn()
     let checks = [ waitingCheck ]
     const { rerender } = render(
-      <Await name="test"
+      <Waiter name="test"
           checks={checks}
           followupHandler={followupTester}
           followupWait={followupWaitMarker}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expect(followupTimeoutCallCount()).toBe(1)
     expect(followupTester).toHaveBeenCalledTimes(0)
@@ -220,12 +220,12 @@ describe('Await', () => {
     expect(followupTester).toHaveBeenCalledTimes(1)
     checks = [ blockedCheck ]
     rerender(
-      <Await name="test"
+      <Waiter name="test"
           checks={checks}
           followupHandler={followupTester}
           followupWait={followupWaitMarker}>
         {noOpChild}
-      </Await>
+      </Waiter>
     )
     expect(followupTimeoutCallCount()).toBe(2)
     expect(followupTester).toHaveBeenCalledTimes(2)
@@ -235,22 +235,22 @@ describe('Await', () => {
   })
 
   test('report status is ordered by severity', () => {
-    const uncheckedCheck = () => ({status : awaitStatus.UNCHECKED})
-    const blockedCheck = () => ({status : awaitStatus.BLOCKED})
+    const uncheckedCheck = () => ({status : waiterStatus.UNCHECKED})
+    const blockedCheck = () => ({status : waiterStatus.BLOCKED})
 
     const checks = [ resolvedCheck, blockedCheck, uncheckedCheck, waitingCheck ]
     let report
     const reportHandler = (r) => report = r
     render(
-      <Await name="test" checks={checks} reportHandler={reportHandler}>
+      <Waiter name="test" checks={checks} reportHandler={reportHandler}>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(report.checksInfo).toHaveLength(4)
-    expect(report.checksInfo[0].status).toBe(awaitStatus.UNCHECKED)
-    expect(report.checksInfo[1].status).toBe(awaitStatus.BLOCKED)
-    expect(report.checksInfo[2].status).toBe(awaitStatus.WAITING)
-    expect(report.checksInfo[3].status).toBe(awaitStatus.RESOLVED)
+    expect(report.checksInfo[0].status).toBe(waiterStatus.UNCHECKED)
+    expect(report.checksInfo[1].status).toBe(waiterStatus.BLOCKED)
+    expect(report.checksInfo[2].status).toBe(waiterStatus.WAITING)
+    expect(report.checksInfo[3].status).toBe(waiterStatus.RESOLVED)
   })
 
   test("default alert issued if unresolved after 'followupWait'", () => {
@@ -258,9 +258,9 @@ describe('Await', () => {
     jest.spyOn(window, 'alert').mockImplementation((out) => report = out)
 
     render(
-      <Await name="test" checks={[ waitingCheck ]} followupWait={1000}>
+      <Waiter name="test" checks={[ waitingCheck ]} followupWait={1000}>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(report).toBeNull()
     jest.advanceTimersByTime(500)
@@ -272,44 +272,44 @@ describe('Await', () => {
   test("invokes 'reportHandler' only on initial run and when report changes", () => {
     const testHandler = jest.fn()
     const { rerender } = render(
-      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp={false}>
+      <Waiter name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp={false}>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(testHandler).toHaveBeenCalledTimes(1)
 
     rerender(
-      <Await name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp>
+      <Waiter name="test" checks={[ waitingCheck ]} reportHandler={testHandler} someProp>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(testHandler).toHaveBeenCalledTimes(1)
 
     rerender(
-      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
+      <Waiter name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(testHandler).toHaveBeenCalledTimes(2)
 
     rerender(
-      <Await name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
+      <Waiter name="test" checks={[ resolvedCheck ]} reportHandler={testHandler} someProp>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
     expect(testHandler).toHaveBeenCalledTimes(2)
   })
 
   test('default report renders multiple summaraies as an unordered list', () => {
     const checks = [
-      () => ({ status : awaitStatus.WAITING, summary : "Waiting on foo..." }),
-      () => ({ status : awaitStatus.WAITING, summary : "Waiting on bar..." })
+      () => ({ status : waiterStatus.WAITING, summary : "Waiting on foo..." }),
+      () => ({ status : waiterStatus.WAITING, summary : "Waiting on bar..." })
     ]
 
     const { container } = render(
-      <Await name="test" checks={checks}>
+      <Waiter name="test" checks={checks}>
         { noOpChild }
-      </Await>
+      </Waiter>
     )
 
     expect(container.querySelectorAll('ul')).toHaveLength(1)
@@ -319,10 +319,10 @@ describe('Await', () => {
   test("throws error if 'checks' functions return invalid", () => {
     jest.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      expect(() => render(<Await checks={[() => true]}>{noOpChild}</Await>))
+      expect(() => render(<Waiter checks={[() => true]}>{noOpChild}</Waiter>))
         .toThrow(new RegExp(msgs.badCheckReturn))
-      expect(() => render(<Await checks={[() => ({ status : 'foo' })]}>{noOpChild}</Await>))
-        .toThrow(/Use 'awaitStatus' constants/)
+      expect(() => render(<Waiter checks={[() => ({ status : 'foo' })]}>{noOpChild}</Waiter>))
+        .toThrow(/Use 'waiterStatus' constants/)
     }
     finally { console.error.mockRestore() } // eslint-disable-line no-console
   })
@@ -331,13 +331,13 @@ describe('Await', () => {
     let report
     jest.spyOn(console, 'error').mockImplementation((msg) => report = msg)
     try {
-      let test = <Await>{noOpChild}</Await> //eslint-disable-line no-unused-vars
+      let test = <Waiter>{noOpChild}</Waiter> //eslint-disable-line no-unused-vars
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
-      test = <Await checks={null}>{noOpChild}</Await>
+      test = <Waiter checks={null}>{noOpChild}</Waiter>
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
-      test = <Await checks={[]}>{noOpChild}</Await>
+      test = <Waiter checks={[]}>{noOpChild}</Waiter>
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
-      test = <Await checks={['not a function']}>{noOpChild}</Await>
+      test = <Waiter checks={['not a function']}>{noOpChild}</Waiter>
       expect(report).toMatch(new RegExp(msgs.checksRequirement))
     }
     finally { console.error.mockRestore() } // eslint-disable-line no-console

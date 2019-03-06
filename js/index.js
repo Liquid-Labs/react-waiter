@@ -1,1 +1,1 @@
-export * from './components/Await'
+export * from './components/Waiter'
