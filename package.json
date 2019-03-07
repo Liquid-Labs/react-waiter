@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/react-waiter",
-  "version": "1.0.0-prototype.9",
+  "version": "1.0.0-prototype.10",
   "description": "Hook, render-component, and HOC for rendering \"loading\" messages or other actions based on one or more dynamic conditions.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
