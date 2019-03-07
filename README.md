@@ -1,7 +1,7 @@
-# react-await
+# react-waiter
 
 Hook, render-component, and HOC for rendering \"loading\" messages or other actions based on one or more dynamic conditions.
 
 ## Install
 
-    npm i @liquid-labs/react-await
+    npm i @liquid-labs/react-waiter

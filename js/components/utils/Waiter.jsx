@@ -1,7 +1,7 @@
 /**
- * Await will display the `spinner`, `blocked`, or `children` render props based
- * on results of running the `awaitChceks` functions, with a net result
- * 'waiting', 'blocked', or 'resolved' corresponding to each render prop.
+ * Waiter will display the `spinner`, `blocker`, or `children` render props based
+ * on results of running the `waiterChceks` functions, with a net result
+ * 'waiting', 'blocker', or 'resolved' corresponding to each render prop.
  *
  * `followupHandler` is invoked if the status effective status remains un-
  * resolved after `followupWait` miliseconds (defaults to 3000 == 3 seconds).
@@ -15,52 +15,15 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import isEqual from 'lodash.isequal'
-import * as msgs from './msgs'
-
-// The stati are powers of 2 so we can bit-or them.
-const awaitStatus = {
-  UNCHECKED : 0,
-  BLOCKED   : 1,
-  WAITING   : 2,
-  RESOLVED  : 4,
-}
-
-const awaitStatusToString = {
-  [awaitStatus.UNCHECKED] : 'Unchecked',
-  [awaitStatus.BLOCKED]   : 'Blocked',
-  [awaitStatus.WAITING]   : 'Waiting',
-  [awaitStatus.RESOLVED]  : 'Resolved'
-}
-
-// Default handler invoked if
-const defaultFollowupHandler = (report, followupCount, followupMax) =>
-  window.alert(
-    `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`,
-    report.summaries.join("\n\t"),
-    followupCount < followupMax
-      ? `Warning #${followupCount}.`
-      : 'Last warning.')
-
-// TODO: colorize the report
-const defaultReportDisplay = (report) =>
-  report.summaries.length === 0
-    ? `${report.name} is ${awaitStatusToString[report.finalStatus].toLowerCase()}.`
-    : report.summaries.length === 1
-      ? `${report.name} ${report.summaries[0]}`
-      : (<div>{`${report.name}:`}
-        <ul>
-          { report.summaries.map((summary) => (<li key={summary}>{summary}</li>)) }
-        </ul>
-      </div>)
-
-const defaultSpinner = defaultReportDisplay
-const defaultBlocked = defaultReportDisplay
+import * as waiterSettings from '../../settings/settings'
+import { waiterStatus } from '../../utils/status'
+import * as msgs from '../msgs'
 
 /**
  * runReport executes the `checks` and assembles a final report object.
  */
 const runReport = (name, checks, props) => {
-  let finalStatus = awaitStatus.RESOLVED
+  let finalStatus = waiterStatus.RESOLVED
   const errorMessages = []
 
   const checksInfo = checks.map((check) => {
@@ -69,16 +32,16 @@ const runReport = (name, checks, props) => {
       if (typeof checkInfo !== 'object') {
         throw new Error(msgs.badCheckReturn)
       }
-      else if (checkInfo.status !== awaitStatus.RESOLVED
-               && checkInfo.status !== awaitStatus.WAITING
-               && checkInfo.status !== awaitStatus.BLOCKED
-               && checkInfo.status !== awaitStatus.UNCHECKED) {
-        throw new Error(`Await 'checks' function had unexpected status '${checkInfo.status}'. Use 'awaitStatus' constants.`)
+      else if (checkInfo.status !== waiterStatus.RESOLVED
+               && checkInfo.status !== waiterStatus.WAITING
+               && checkInfo.status !== waiterStatus.BLOCKED
+               && checkInfo.status !== waiterStatus.UNCHECKED) {
+        throw new Error(`Waiter 'checks' function had unexpected status '${checkInfo.status}'. Use 'waiterStatus' constants.`)
       }
     }
 
     // calculate the 'finalStatus' for the checks as a group.
-    if (checkInfo.status === awaitStatus.BLOCKED
+    if (checkInfo.status === waiterStatus.BLOCKED
         && checkInfo.errorMessage === undefined
         && checkInfo.summary) {
       checkInfo.errorMessage = `${name} ${checkInfo.summary}`
@@ -105,15 +68,29 @@ const runReport = (name, checks, props) => {
   }
 }
 
-const Await = ({
+const Waiter = ({
   name, checks, checkProps,
-  spinner=defaultSpinner,
-  blocked=defaultBlocked,
-  reportHandler=null,
-  followupHandler=defaultFollowupHandler,
-  followupWait=3000,
-  followupMax=3,
+  spinner, blocker,
+  followupHandler, followupWait, followupMax,
+  reportHandler,
   children, ...props}) => {
+  // set defaults from settings for unset options
+  const Spinner = spinner || waiterSettings.getDefaultSpinner()
+  const Blocker = blocker || waiterSettings.getDefaultBlocker()
+  reportHandler = reportHandler || waiterSettings.getDefaultReportHandler()
+  followupHandler = followupHandler || waiterSettings.getDefaultFollowupHandler()
+  followupWait = followupWait !== undefined
+    ? followupWait
+    : waiterSettings.getDefaultFollowupWait()
+  followupMax = followupMax !== undefined
+    ? followupMax
+    : waiterSettings.getDefaultFollowupMax()
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (!Spinner) throw new Error("No 'spinner' defined. Try 'waiterSettings.setDefaultSpinner(...)' or 'basicWaiterSetup()'.")
+    if (!Blocker) throw new Error("No 'blocker' defined. Try 'waiterSettings.setDefaultSpinner(...)' or 'basicWaiterSetup().'")
+  }
+
   const report = runReport(name, checks, checkProps)
   const [ prevReport, setPrevReport ] = useState(report)
   const [ followupCount, setFollowupCount ] = useState(0)
@@ -131,9 +108,9 @@ const Await = ({
     }
 
     if (followupHandler
-        && report.finalStatus !== awaitStatus.RESOLVED
+        && report.finalStatus !== waiterStatus.RESOLVED
         && followupCount < followupMax) {
-      if (report.finalStatus === awaitStatus.BLOCKED) {
+      if (report.finalStatus === waiterStatus.BLOCKED) {
         followupHandler(report, followupCount+1, followupCount+1)
       }
       else {
@@ -150,16 +127,16 @@ const Await = ({
   [name, checks, reportHandler, followupCount, followupHandler, followupMax, followupWait, checkProps])
   // Pick the render prop to render.
   if (report !== null
-      && report.finalStatus === awaitStatus.RESOLVED) {
+      && report.finalStatus === waiterStatus.RESOLVED) {
     return typeof children === 'function' ? children(props) : children
   }
   else if (report !== null
-           && (report.finalStatus === awaitStatus.WAITING
-               || report.finalStatus === awaitStatus.UNCHECKED)) {
-    return spinner(report)
+           && (report.finalStatus === waiterStatus.WAITING
+               || report.finalStatus === waiterStatus.UNCHECKED)) {
+    return (<Spinner report={report} />)
   }
   else { // status is either BLOCKED or reports are both null (bad checks)
-    return blocked(report)
+    return (<Blocker report={report} />)
   }
 }
 
@@ -172,20 +149,17 @@ if (process.env.NODE_ENV !== 'production') {
       return new Error(`${propName} ${msgs.checksRequirement}`);
     }
   }
-  Await.propTypes = {
-    blocked       : PropTypes.func,
-    checks        : checksValidator,
-    checkProps    : PropTypes.any,
-    children      : PropTypes.oneOfType([PropTypes.node, PropTypes.func]).isRequired,
-    followupWait  : PropTypes.number,
-    reportHandler : PropTypes.func,
-    spinner       : PropTypes.func
+  Waiter.propTypes = {
+    blocker         : PropTypes.node,
+    checks          : checksValidator,
+    checkProps      : PropTypes.any,
+    children        : PropTypes.oneOfType([PropTypes.node, PropTypes.func]).isRequired,
+    followupHandler : PropTypes.func,
+    followupMax     : PropTypes.number,
+    followupWait    : PropTypes.number,
+    reportHandler   : PropTypes.func,
+    spinner         : PropTypes.node
   }
 }
 
-export {
-  Await,
-  awaitStatus,
-  awaitStatusToString,
-  defaultReportDisplay
-}
+export { Waiter }
