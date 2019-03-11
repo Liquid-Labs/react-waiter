@@ -69,7 +69,7 @@ const runReport = (name, checks, props) => {
 }
 
 const Waiter = ({
-  name, checks, checkProps,
+  name, checks, checkProps, tiny=false,
   spinner, blocker,
   followupHandler, followupWait, followupMax,
   reportHandler,
@@ -133,10 +133,10 @@ const Waiter = ({
   else if (report !== null
            && (report.finalStatus === waiterStatus.WAITING
                || report.finalStatus === waiterStatus.UNCHECKED)) {
-    return (<Spinner report={report} />)
+    return (<Spinner report={report} tiny={tiny} />)
   }
   else { // status is either BLOCKED or reports are both null (bad checks)
-    return (<Blocker report={report} />)
+    return (<Blocker report={report} tiny={tiny} />)
   }
 }
 
@@ -158,7 +158,8 @@ if (process.env.NODE_ENV !== 'production') {
     followupMax     : PropTypes.number,
     followupWait    : PropTypes.number,
     reportHandler   : PropTypes.func,
-    spinner         : PropTypes.node
+    spinner         : PropTypes.node,
+    tiny            : PropTypes.bool,
   }
 }
 
