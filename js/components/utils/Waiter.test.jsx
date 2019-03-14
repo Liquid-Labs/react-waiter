@@ -38,6 +38,7 @@ describe('Waiter', () => {
   beforeEach(() => window.alert = jest.fn())
   afterEach(() => {
     cleanup()
+    jest.clearAllMocks()
     waiterSettings.reset()
   })
 

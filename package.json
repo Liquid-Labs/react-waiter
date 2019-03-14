@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/Liquid-Labs/react-waiter#readme",
   "devDependencies": {
-    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.13",
+    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.15",
     "lodash.isequal": "^4.5.0",
     "prop-types": "^15.7.2",
     "react": "^16.8.1",
